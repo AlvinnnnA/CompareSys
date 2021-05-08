@@ -78,7 +78,7 @@ def webCompare(SourceDocString1):  #网络对比
         site_contentdict[j]=sitecontent
     browser.quit()  #关闭浏览器
     for l in resultcontent[0:5]:  #取的数字太小
-        rel=synonyms.compare(SourceDocString1,l, seg=True)
+        rel=synonyms.compare(SourceDocString1,l, seg=True,ignore=True)
         print(rel)
         results[rel]=l #result字典中存储link对应的text（key：list）
         r.append(rel)  #语句比对
@@ -120,7 +120,7 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
             SourceDocString2=wordGet(2)
         start =time.process_time() #计时
         print("正在进行比对")
-        r = synonyms.compare(SourceDocString1, SourceDocString2, seg=True) #语句比对
+        r = synonyms.compare(SourceDocString1, SourceDocString2, seg=True,ignore=True) #语句比对
         end=time.process_time()
         Sim=str(r)  #将r值number转换为string
         g.msgbox(msg="输入的语句相似度为"+Sim, title='比对结果', ok_button='返回')
@@ -156,7 +156,7 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
         sen2=g.enterbox(msg='请输入需比对的第二语句', title='输入语句',  strip=True, image=None)
         start =time.process_time()  #计时
         print("正在进行比对")
-        r = synonyms.compare(sen1, sen2, seg=True)  #语句比对
+        r = synonyms.compare(sen1, sen2, seg=True,ignore=True)  #语句比对
         Sim=str(r)  #将r值number转换为string
         end=time.process_time()
         g.msgbox(msg="输入的语句相似度为"+Sim, title='比对结果', ok_button='返回')
@@ -170,7 +170,7 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
         sen1=g.enterbox(msg='请输入需比对的第一语句', title='输入语句',  strip=True, image=None)
         start =time.process_time() #计时
         print("正在进行比对")
-        r = synonyms.compare(sen1,SourceDocString1, seg=True)  #语句比对
+        r = synonyms.compare(sen1,SourceDocString1, seg=True,ignore=True)  #语句比对
         Sim=str(r)  #将r值number转换为string
         end=time.process_time()
         g.msgbox(msg="输入的语句相似度为"+Sim, title='比对结果', ok_button='返回')
@@ -199,7 +199,7 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
                 pass
         start =time.process_time()
         for filecon in filecontent.values(): #比对代码+反向查询+排序
-            rel=synonyms.compare(filecon,SourceDocString1,seg=True)
+            rel=synonyms.compare(filecon,SourceDocString1,seg=True,ignore=True)
             reldict[rel]=filecon #创造子字典（相似度：比对内容）
         ressorted=sorted(reldict.items(),key=lambda x:x[0],reverse=True)
         for key,value in filecontent.items( ): #创造主字典内反向查找的条件
@@ -214,7 +214,41 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
         end=time.process_time()
         g.msgbox(msg="相似度最高，为"+str(output_list[0])+"的文件为："+output_list2[0]+ "\n"+"相似度第二高，为"+str(output_list[1])+"的文件为："+output_list2[1]+ "\n"+"相似度第三高，为"+str(output_list[2])+"的文件为："+output_list2[2])
     elif mode==6:#文件夹交叉比对
-        pass
+        Dir=g.diropenbox(msg="请选择需比对的文件目录",title="请选择需比对的文件目录") #取文件夹
+        FileDir=os.listdir(Dir) #遍历文件
+        FullDir=[]
+        RelDict={}
+        output={}
+        output_list=[]
+        output_list2=[]
+        for file in FileDir:#完整路径list
+           fildir=Dir+"\\"+file
+           FullDir.append(fildir)
+        start =time.process_time()
+        for sourcefile in FullDir[0:len(FullDir)-1]:#对除最后一个以外的每一个文件进行操作
+               srcdoc=docx.Document(sourcefile)
+               srccontent=''
+               for i in srcdoc.paragraphs:  #遍历全部段落
+                  srccontentstr=i.text
+                  if len(srccontentstr)>0: #排除空段
+                      srccontent+=srccontentstr #content字符串保存内容
+               for targetfile in FullDir[FullDir.index(sourcefile)+1:]:#对该文件与其之后的文件进行比对
+                  tgtdoc=docx.Document(targetfile)
+                  tgtcontent=''
+                  for i in tgtdoc.paragraphs:  #遍历全部段落
+                     tgtcontentstr=i.text
+                     if len(tgtcontentstr)>0: #排除空段
+                        tgtcontent+=tgtcontentstr #content字符串保存内容
+                  sim=synonyms.compare(srccontent,tgtcontent,seg=True,ignore=True)
+                  RelDict[sim]=os.path.basename(targetfile)+"和"+os.path.basename(sourcefile)
+        ressorted=sorted(RelDict.items(),key=lambda x:x[0],reverse=True)
+        end=time.process_time()
+        for m in ressorted[0:3]:#beg:end=beg->(end-1)!!!!!注意数字含义！！
+            output[m[0]]=m[1]
+        for key,value in output.items( ): #创造输出的条件
+            output_list.append(key)
+            output_list2.append(value)
+        g.msgbox(msg="相似度最高，为"+str(output_list[0])+"的文件为："+output_list2[0]+ "\n"+"相似度第二高，为"+str(output_list[1])+"的文件为："+output_list2[1]+ "\n"+"相似度第三高，为"+str(output_list[2])+"的文件为："+output_list2[2])
     print("本次运行用时%6.3f'秒" %(end - start),sep='')
 while True:
     compareText()
