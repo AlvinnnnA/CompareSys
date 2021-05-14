@@ -2,7 +2,7 @@ import time  #载入计时需要的包
 loadstart=time.process_time()
 import easygui as g  #载入GUI包
 print("正在载入运行包")
-import synonyms,os,docx  #载入主要包和一些需要的包
+import synonyms,os,sys,docx  #载入主要包和一些需要的包
 from selenium import webdriver  #载入浏览器操作包
 from webdriver_manager.microsoft import EdgeChromiumDriverManager  #载入浏览器自动控制驱动
 loadend=time.process_time()
@@ -53,7 +53,7 @@ def webCompare(SourceDocString1):  #网络对比
     print("文本关键词为",keywords)
     site="m.51test.net"  #搜索站点 暂定"无忧考网"
     browser = webdriver.Edge(EdgeChromiumDriverManager().install())  #使用edge浏览器
-    browser.get("https://cn.bing.com/search?q="+" "+keywords[0]+" "+keywords[1]+" "+keywords[2]+"site:"+site)  #必应搜索三个关键词
+    browser.get("https://cn.bing.com/search?q="+" "+keywords[0]+" "+keywords[1]+" "+keywords[2]+" site:"+site)  #必应搜索三个关键词
     search_links=[] #储存搜索结果的链接list
     resultcontent=[]  #储存搜索结果内容list
     r=[]  #结果数字list
@@ -63,43 +63,39 @@ def webCompare(SourceDocString1):  #网络对比
     value_list2=[]    
     site_contentdict={}
     output={}
+    sitestr=""
     result=browser.find_elements_by_css_selector("h2>a")  #提取搜索结果项源码
-    for i in result[0:5]:  #前五搜索结果源码中提取链接
+    for i in result[0:8]:  #前五搜索结果源码中提取链接
         if isMatch("https://"+site,i.get_attribute("href"))==True:  #排除非该网站的项
             search_links.append(i.get_attribute("href"))  #提取链接合并到list
     for j in search_links: #打开结果链接并提取内容
         browser.get(j)
         rstelmt=browser.find_elements_by_css_selector("div#content-txt>p")  #ResultElement
-        sitecontent=[]
         for k in rstelmt:  #只有当前网页才能提取文本，故需要在循环中加循环嵌套
             if len(k.get_attribute("textContent"))>0:  #排除空内容
-                resultcontent.append(k.get_attribute("textContent"))  #单网站内容集
-                sitecontent.append(k.get_attribute("textContent"))
-        site_contentdict[j]=sitecontent
+                sitestr+=k.get_attribute("textContent")
+        resultcontent.append(sitestr)  #单网站内容集
+        site_contentdict[j]=sitestr
     browser.quit()  #关闭浏览器
     for l in resultcontent[0:5]:  #取的数字太小
         rel=synonyms.compare(SourceDocString1,l, seg=True,ignore=True)
         print(rel)
         results[rel]=l #result字典中存储link对应的text（key：list）
+        print(results)
         r.append(rel)  #语句比对
     ressorted=sorted(results.items(),key=lambda x:x[0],reverse=True) 
     for key,value in site_contentdict.items( ): #创造主字典内反向查找的条件
         key_list2.append(key)
-        value_list2.append(value)    
+        value_list2.append(value)
+    print(ressorted)
     for m in ressorted[0:3]:
-        key=m[1]  #查找：在results中取前三位的key值
-        num=ressorted.index(m)
-        g.msgbox(msg="相似度第"+str(num)+"高的文本为："+key) #输出高相似文本作参考！
-        pass  #在values中查找对应的results：key（没写完）
-        for valuesublist in value_list2:
-            if key in valuesublist:
-                output[m[0]]=key_list2[value_list2.index(valuesublist)]  #将rel：link加入output字典之中
-    print(output)
+        val=m[1]  #查找：在results中取前三位的key值
+        output[m[0]]=key_list2[value_list2.index(val)]  #将rel：link加入output字典之中
     return output  #要改return值
 def compareText():   #主体判断与执行函数 (要做的：+文件与文件夹比对  +大量文件互相交叉比对12)
     mode=chooseMode()   #选择模式 
     if mode==0:
-        os._exit(0)   #点取消就退出程序
+        sys.exit(0)   #点取消就退出程序
     elif mode==1:   #文件比对
         choice=g.buttonbox(msg='请选择文件格式', title='选择文件格式', choices=('TXT', 'Word(仅支持docx格式)'), image=None)
         if choice=='TXT':
@@ -131,7 +127,7 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
         if choice=='输入文本':
             sen1=g.enterbox(msg='请输入需比对的语句', title='输入语句',  strip=True, image=None)
             start =time.process_time()  #计时
-            r=webCompare(sen1) #比对函数
+            output=webCompare(sen1) #比对函数
             end=time.process_time()
             for key,value in output.items( ): #创造输出的条件
                 output_list.append(key)
@@ -145,11 +141,12 @@ def compareText():   #主体判断与执行函数 (要做的：+文件与文件�
             finally:  
                 Source1.close()
             start =time.process_time()  #计时
-            r=webCompare(SourceDocString1)
+            output=webCompare(SourceDocString1)
             end=time.process_time()
             for key,value in output.items( ): #创造输出的条件
                 output_list.append(key)
                 output_list2.append(value)
+            print(output)
             g.msgbox(msg="相似度最高，为"+str(output_list[0])+"的网络链接为："+output_list2[0]+ "\n"+"相似度第二高，为"+str(output_list[1])+"的网络链接为："+output_list2[1]+ "\n"+"相似度第三高，为"+str(output_list[2])+"的网络链接为："+output_list2[2])
     elif mode==3: #即时输入比对
         sen1=g.enterbox(msg='请输入需比对的第一语句', title='输入语句',  strip=True, image=None)
